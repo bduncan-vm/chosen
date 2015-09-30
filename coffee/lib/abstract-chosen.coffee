@@ -33,6 +33,8 @@ class AbstractChosen
     @display_disabled_options = if @options.display_disabled_options? then @options.display_disabled_options else true
     @include_group_label_in_selected = @options.include_group_label_in_selected || false
     @max_shown_results = @options.max_shown_results || Number.POSITIVE_INFINITY
+    @search_delay = @options.search_delay || 0
+    @min_search_chars = @options.min_search_chars || 0
 
   set_default_text: ->
     if @form_field.getAttribute("data-placeholder")
@@ -143,14 +145,23 @@ class AbstractChosen
       this.results_show()
 
   results_search: (evt) ->
+    if @options.search_delay != 0
+      clearTimeout @results_search_timeout
+      @results_search_timeout = setTimeout (=> this._results_search evt), @options.search_delay
+    else
+      this._results_search evt
+    return
+
+  _results_search: (evt) ->
     if @results_showing
       this.winnow_results()
     else
       this.results_show()
+    return
 
   winnow_results: ->
     searchText = this.get_search_text()
-    return if @lastSearchText == searchText
+    return if @lastSearchText == searchText || (searchText.length > 0 && searchText.length < @options.min_search_chars)
     @lastSearchText = searchText
 
     this.no_results_clear()
