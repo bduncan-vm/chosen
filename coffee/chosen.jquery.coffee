@@ -242,7 +242,8 @@ class Chosen extends AbstractChosen
     @form_field_jq.trigger("chosen:showing_dropdown", {chosen: this})
 
   update_results_content: (content) ->
-    @search_results.html content
+    @search_results[0].innerHTML = content.join ''
+    return
 
   results_hide: ->
     if @results_showing

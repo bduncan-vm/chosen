@@ -65,17 +65,16 @@ class AbstractChosen
       setTimeout (=> this.blur_test()), 100
 
   results_option_build: (options) ->
-    content = ''
+    content = []
     shown_results = 0
     for data in @results_data
-      data_content = ''
+      content_length = content.length
       if data.group
-        data_content = this.result_add_group data
+        this.result_add_group content, data
       else
-        data_content = this.result_add_option data
-      if data_content != ''
+        this.result_add_option content, data
+      if content_length != content.length
         shown_results++
-        content += data_content
 
       # this select logic pins on an awkward flag
       # we can make it better
@@ -90,40 +89,41 @@ class AbstractChosen
 
     content
 
-  result_add_option: (option) ->
-    return '' unless option.search_match
-    return '' unless this.include_option_in_results(option)
+  result_add_option: (content, option) ->
+    return unless option.search_match
+    return unless this.include_option_in_results(option)
 
-    classes = []
-    classes.push "active-result" if !option.disabled and !(option.selected and @is_multiple)
-    classes.push "disabled-result" if option.disabled and !(option.selected and @is_multiple)
-    classes.push "result-selected" if option.selected
-    classes.push "group-option" if option.group_array_index?
-    classes.push option.classes if option.classes != ""
+    content.push '<li class="'
+    content.push "active-result " if !option.disabled and !(option.selected and @is_multiple)
+    content.push "disabled-result " if option.disabled and !(option.selected and @is_multiple)
+    content.push "result-selected " if option.selected
+    content.push "group-option " if option.group_array_index?
+    content.push option.classes if option.classes != ""
+    if option.title
+      content.push '" title="'
+      content.push option.title
+    content.push '" style="'
+    content.push option.style
+    content.push '" data-option-array-index="'
+    content.push option.array_index
+    content.push '">'
+    content.push option.search_text
+    content.push '</li>'
+    return
 
-    option_el = document.createElement("li")
-    option_el.className = classes.join(" ")
-    option_el.style.cssText = option.style
-    option_el.setAttribute("data-option-array-index", option.array_index)
-    option_el.innerHTML = option.search_text
-    option_el.title = option.title if option.title
+  result_add_group: (content, group) ->
+    return unless group.search_match || group.group_match
+    return unless group.active_options > 0
 
-    this.outerHTML(option_el)
-
-  result_add_group: (group) ->
-    return '' unless group.search_match || group.group_match
-    return '' unless group.active_options > 0
-
-    classes = []
-    classes.push "group-result"
-    classes.push group.classes if group.classes
-
-    group_el = document.createElement("li")
-    group_el.className = classes.join(" ")
-    group_el.innerHTML = group.search_text
-    group_el.title = group.title if group.title
-
-    this.outerHTML(group_el)
+    content.push '<li class="group-result '
+    content.push group.classes if group.classes
+    if group.title
+      content.push '" title="'
+      content.push group.title
+    content.push '">'
+    content.push group.search_text
+    content.push '</li>'
+    return
 
   results_update_field: ->
     this.set_default_text()
@@ -149,11 +149,14 @@ class AbstractChosen
       this.results_show()
 
   winnow_results: ->
+    searchText = this.get_search_text()
+    return if @lastSearchText == searchText
+    @lastSearchText = searchText
+
     this.no_results_clear()
 
     results = 0
 
-    searchText = this.get_search_text()
     escapedSearchText = searchText.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
     zregex = new RegExp(escapedSearchText, 'i')
     regex = this.get_search_regex(escapedSearchText)
@@ -194,7 +197,7 @@ class AbstractChosen
     this.result_clear_highlight()
 
     if results < 1 and searchText.length
-      this.update_results_content ""
+      this.update_results_content []
       this.no_results searchText
     else
       this.update_results_content this.results_option_build()
@@ -272,12 +275,6 @@ class AbstractChosen
 
   search_results_touchend: (evt) ->
     this.search_results_mouseup(evt) if @touch_started
-
-  outerHTML: (element) ->
-    return element.outerHTML if element.outerHTML
-    tmp = document.createElement("div")
-    tmp.appendChild(element)
-    tmp.innerHTML
 
   # class methods and variables ============================================================
 
